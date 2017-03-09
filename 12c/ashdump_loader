@@ -1,0 +1,25 @@
+export start=$(grep -n "<<<ACTIVE SESSION HISTORY - PROCESS TRACE DUMP BEGIN>>>" $1 |awk -F':' '{print $1}')+1
+export end=$(grep -n "<<<ACTIVE SESSION HISTORY - PROCESS TRACE DUMP END>>>" $1|awk -F':' '{print $1}')
+awk 'NR > '${start}' && NR < '${end} $1 > ashdump.dat
+sqlplus / as sysdba<<EOF
+create user ashdump identified by jduf27dh2;
+grant resource to ashdump;
+alter user ashdump QUOTA UNLIMITED ON USERS;
+CREATE TABLE ashdump.ashdump AS
+SELECT * FROM SYS.WRH\$_ACTIVE_SESSION_HISTORY WHERE rownum < 0;
+alter table ashdump.ashdump add event varchar2(64);
+alter table ashdump.ashdump add wait_class varchar2(64);
+alter table ashdump.ashdump add p1text varchar2(64);
+alter table ashdump.ashdump add p2text varchar2(64);
+alter table ashdump.ashdump add p3text varchar2(64);
+create unique index ashdump.ashdump_uk on ashdump.ashdump (instance_number,sample_id,session_id,session_serial#);
+exit
+EOF
+
+sqlldr userid=\'/ as sysdba\' control=ashdump_sqlldr.ctl data=ashdump.dat
+
+sqlplus / as sysdba<<EOF
+@ashdump_post.sql
+select count(*) from ashdump.ashdump;
+exit
+EOF

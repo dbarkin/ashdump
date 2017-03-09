@@ -1,0 +1,1 @@
+create table ashdump as select * from DBA_HIST_ACTIVE_SESS_HISTORY where 1=0;

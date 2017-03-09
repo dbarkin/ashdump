@@ -1,0 +1,1 @@
+sqlldr control=ashdump_sqlldr.ctl data=$1
